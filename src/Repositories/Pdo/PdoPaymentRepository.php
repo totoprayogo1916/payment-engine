@@ -27,8 +27,7 @@ class PdoPaymentRepository implements PaymentRepositoryInterface
             ? 'UPDATE payments SET payment_number = :payment_number, payable_type = :payable_type, payable_id = :payable_id, payer_type = :payer_type, payer_id = :payer_id, method = :method, gateway_provider = :gateway_provider, status = :status, currency = :currency, amount = :amount, fee = :fee, total_amount = :total_amount, paid_amount = :paid_amount, refunded_amount = :refunded_amount, expires_at = :expires_at, paid_at = :paid_at, metadata = :metadata, updated_at = :updated_at WHERE id = :id'
             : 'INSERT INTO payments (id, payment_number, payable_type, payable_id, payer_type, payer_id, method, gateway_provider, status, currency, amount, fee, total_amount, paid_amount, refunded_amount, expires_at, paid_at, metadata, created_at, updated_at) VALUES (:id, :payment_number, :payable_type, :payable_id, :payer_type, :payer_id, :method, :gateway_provider, :status, :currency, :amount, :fee, :total_amount, :paid_amount, :refunded_amount, :expires_at, :paid_at, :metadata, :created_at, :updated_at)';
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'id' => $payment->id,
             'payment_number' => $payment->paymentNumber->value,
             'payable_type' => $payment->payable->type,
@@ -47,9 +46,15 @@ class PdoPaymentRepository implements PaymentRepositoryInterface
             'expires_at' => $payment->expiresAt?->format('Y-m-d H:i:s'),
             'paid_at' => $payment->paidAt?->format('Y-m-d H:i:s'),
             'metadata' => $payment->metadata !== null ? json_encode($payment->metadata, JSON_THROW_ON_ERROR) : null,
-            'created_at' => $payment->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $payment->updatedAt->format('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        if (! $existing instanceof Payment) {
+            $params['created_at'] = $payment->createdAt->format('Y-m-d H:i:s');
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function findById(string $id): ?Payment

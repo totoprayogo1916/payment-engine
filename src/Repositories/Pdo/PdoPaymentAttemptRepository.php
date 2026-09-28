@@ -23,8 +23,7 @@ class PdoPaymentAttemptRepository implements PaymentAttemptRepositoryInterface
             ? 'UPDATE payment_attempts SET payment_id = :payment_id, gateway_provider = :gateway_provider, transaction_reference = :transaction_reference, status = :status, amount = :amount, currency = :currency, raw_request = :raw_request, raw_response = :raw_response WHERE id = :id'
             : 'INSERT INTO payment_attempts (id, payment_id, gateway_provider, transaction_reference, status, amount, currency, raw_request, raw_response, created_at) VALUES (:id, :payment_id, :gateway_provider, :transaction_reference, :status, :amount, :currency, :raw_request, :raw_response, :created_at)';
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'id' => $paymentAttempt->id,
             'payment_id' => $paymentAttempt->paymentId,
             'gateway_provider' => $paymentAttempt->gatewayProvider,
@@ -34,8 +33,14 @@ class PdoPaymentAttemptRepository implements PaymentAttemptRepositoryInterface
             'currency' => $paymentAttempt->amount->currency,
             'raw_request' => $paymentAttempt->rawRequest !== null ? json_encode($paymentAttempt->rawRequest, JSON_THROW_ON_ERROR) : null,
             'raw_response' => $paymentAttempt->rawResponse !== null ? json_encode($paymentAttempt->rawResponse, JSON_THROW_ON_ERROR) : null,
-            'created_at' => $paymentAttempt->createdAt->format('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        if (! $existing instanceof PaymentAttempt) {
+            $params['created_at'] = $paymentAttempt->createdAt->format('Y-m-d H:i:s');
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function findById(string $id): ?PaymentAttempt

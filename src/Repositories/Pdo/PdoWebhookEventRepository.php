@@ -21,8 +21,7 @@ class PdoWebhookEventRepository implements WebhookEventRepositoryInterface
             ? 'UPDATE webhook_events SET gateway_provider = :gateway_provider, event_id = :event_id, payload_fingerprint = :payload_fingerprint, payload = :payload, is_processed = :is_processed, processed_at = :processed_at WHERE id = :id'
             : 'INSERT INTO webhook_events (id, gateway_provider, event_id, payload_fingerprint, payload, is_processed, processed_at, created_at) VALUES (:id, :gateway_provider, :event_id, :payload_fingerprint, :payload, :is_processed, :processed_at, :created_at)';
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'id' => $webhookEvent->id,
             'gateway_provider' => $webhookEvent->gatewayProvider,
             'event_id' => $webhookEvent->eventId,
@@ -30,8 +29,14 @@ class PdoWebhookEventRepository implements WebhookEventRepositoryInterface
             'payload' => json_encode($webhookEvent->payload, JSON_THROW_ON_ERROR),
             'is_processed' => $webhookEvent->isProcessed ? 1 : 0,
             'processed_at' => $webhookEvent->processedAt?->format('Y-m-d H:i:s'),
-            'created_at' => $webhookEvent->createdAt->format('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        if (! $existing instanceof WebhookEvent) {
+            $params['created_at'] = $webhookEvent->createdAt->format('Y-m-d H:i:s');
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function findById(string $id): ?WebhookEvent

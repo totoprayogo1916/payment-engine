@@ -23,8 +23,7 @@ class PdoPaymentRefundRepository implements PaymentRefundRepositoryInterface
             ? 'UPDATE payment_refunds SET payment_id = :payment_id, refund_number = :refund_number, amount = :amount, currency = :currency, reason = :reason, status = :status, gateway_refund_id = :gateway_refund_id, actor_type = :actor_type, actor_id = :actor_id WHERE id = :id'
             : 'INSERT INTO payment_refunds (id, payment_id, refund_number, amount, currency, reason, status, gateway_refund_id, actor_type, actor_id, created_at) VALUES (:id, :payment_id, :refund_number, :amount, :currency, :reason, :status, :gateway_refund_id, :actor_type, :actor_id, :created_at)';
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'id' => $paymentRefund->id,
             'payment_id' => $paymentRefund->paymentId,
             'refund_number' => $paymentRefund->refundNumber,
@@ -35,8 +34,14 @@ class PdoPaymentRefundRepository implements PaymentRefundRepositoryInterface
             'gateway_refund_id' => $paymentRefund->gatewayRefundId,
             'actor_type' => $paymentRefund->actorType,
             'actor_id' => $paymentRefund->actorId,
-            'created_at' => $paymentRefund->createdAt->format('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        if (! $existing instanceof PaymentRefund) {
+            $params['created_at'] = $paymentRefund->createdAt->format('Y-m-d H:i:s');
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function findById(string $id): ?PaymentRefund
